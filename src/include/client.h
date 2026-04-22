@@ -73,7 +73,65 @@ void ReadMap() {
  * mind and make your decision here! Caution: you can only execute once in this function.
  */
 void Decide() {
-  // Simplest strategy: always click the first unknown cell.
+  // Baseline1 strategy: mark obvious mines, then auto-explore, else click an unknown.
+  // 1) Mark obvious mines: if (num - marked == unknown), all unknown neighbors are mines.
+  for (int r = 0; r < rows; ++r) {
+    for (int c = 0; c < columns; ++c) {
+      char ch = client_view[r][c];
+      if (ch >= '1' && ch <= '8') {
+        int num = ch - '0';
+        int unknown = 0, marked = 0;
+        for (int dr = -1; dr <= 1; ++dr) {
+          for (int dc = -1; dc <= 1; ++dc) {
+            if (dr == 0 && dc == 0) continue;
+            int nr = r + dr, nc = c + dc;
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= columns) continue;
+            char v = client_view[nr][nc];
+            if (v == '?') unknown++;
+            else if (v == '@') marked++;
+          }
+        }
+        if (unknown > 0 && num - marked == unknown) {
+          for (int dr = -1; dr <= 1; ++dr) {
+            for (int dc = -1; dc <= 1; ++dc) {
+              if (dr == 0 && dc == 0) continue;
+              int nr = r + dr, nc = c + dc;
+              if (nr < 0 || nr >= rows || nc < 0 || nc >= columns) continue;
+              if (client_view[nr][nc] == '?') {
+                Execute(nr, nc, 1);
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  // 2) Auto-explore: if (marked == num), all unknown neighbors are safe.
+  for (int r = 0; r < rows; ++r) {
+    for (int c = 0; c < columns; ++c) {
+      char ch = client_view[r][c];
+      if (ch >= '0' && ch <= '8') {
+        int num = ch - '0';
+        int marked = 0, unknown = 0;
+        for (int dr = -1; dr <= 1; ++dr) {
+          for (int dc = -1; dc <= 1; ++dc) {
+            if (dr == 0 && dc == 0) continue;
+            int nr = r + dr, nc = c + dc;
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= columns) continue;
+            char v = client_view[nr][nc];
+            if (v == '@') marked++;
+            else if (v == '?') unknown++;
+          }
+        }
+        if (unknown > 0 && marked == num) {
+          Execute(r, c, 2);
+          return;
+        }
+      }
+    }
+  }
+  // 3) Fallback: click the first unknown cell.
   for (int r = 0; r < rows; ++r) {
     for (int c = 0; c < columns; ++c) {
       if (client_view[r][c] == '?') {
@@ -82,17 +140,7 @@ void Decide() {
       }
     }
   }
-  // If no unknowns, try auto-exploring any zero-number cell as a last resort
-  for (int r = 0; r < rows; ++r) {
-    for (int c = 0; c < columns; ++c) {
-      if (client_view[r][c] == '0') {
-        Execute(r, c, 2);
-        return;
-      }
-    }
-  }
-  // Nothing to do; pick (0,0)
-  Execute(0, 0, 0);
+  // If no unknowns remain, do nothing.
 }
 
 #endif
