@@ -3,12 +3,18 @@
 
 #include <iostream>
 #include <utility>
+#include <vector>
+#include <tuple>
+#include <cstdlib>
 
 extern int rows;         // The count of rows of the game map.
 extern int columns;      // The count of columns of the game map.
 extern int total_mines;  // The count of mines of the game map.
 
 // You MUST NOT use any other external variables except for rows, columns and total_mines.
+
+static std::vector<std::string> client_view;
+static bool client_initialized = false;
 
 /**
  * @brief The definition of function Execute(int, int, bool)
@@ -34,7 +40,8 @@ void Execute(int r, int c, int type);
  * will read the scale of the game map and the first step taken by the server (see README).
  */
 void InitGame() {
-  // TODO (student): Initialize all your global variables!
+  client_view.assign(rows, std::string(columns, '?'));
+  client_initialized = true;
   int first_row, first_column;
   std::cin >> first_row >> first_column;
   Execute(first_row, first_column, 0);
@@ -51,7 +58,12 @@ void InitGame() {
  *     01?
  */
 void ReadMap() {
-  // TODO (student): Implement me!
+  if (!client_initialized) client_view.assign(rows, std::string(columns, '?'));
+  for (int i = 0; i < rows; ++i) {
+    std::string line;
+    std::cin >> line;
+    client_view[i] = line;
+  }
 }
 
 /**
@@ -61,10 +73,26 @@ void ReadMap() {
  * mind and make your decision here! Caution: you can only execute once in this function.
  */
 void Decide() {
-  // TODO (student): Implement me!
-  // while (true) {
-  //   Execute(0, 0);
-  // }
+  // Simplest strategy: always click the first unknown cell.
+  for (int r = 0; r < rows; ++r) {
+    for (int c = 0; c < columns; ++c) {
+      if (client_view[r][c] == '?') {
+        Execute(r, c, 0);
+        return;
+      }
+    }
+  }
+  // If no unknowns, try auto-exploring any zero-number cell as a last resort
+  for (int r = 0; r < rows; ++r) {
+    for (int c = 0; c < columns; ++c) {
+      if (client_view[r][c] == '0') {
+        Execute(r, c, 2);
+        return;
+      }
+    }
+  }
+  // Nothing to do; pick (0,0)
+  Execute(0, 0, 0);
 }
 
 #endif
