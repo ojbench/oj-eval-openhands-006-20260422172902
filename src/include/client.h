@@ -131,14 +131,50 @@ void Decide() {
       }
     }
   }
-  // 3) Fallback: click the first unknown cell.
+  // 3) Fallback: pick an unknown cell with minimal estimated risk based on adjacent numbers.
+  int best_r = -1, best_c = -1;
+  double best_score = 1e9;
   for (int r = 0; r < rows; ++r) {
     for (int c = 0; c < columns; ++c) {
-      if (client_view[r][c] == '?') {
-        Execute(r, c, 0);
-        return;
+      if (client_view[r][c] != '?') continue;
+      double sum_p = 0.0; int cnt = 0;
+      for (int dr = -1; dr <= 1; ++dr) {
+        for (int dc = -1; dc <= 1; ++dc) {
+          if (dr == 0 && dc == 0) continue;
+          int nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= rows || nc < 0 || nc >= columns) continue;
+          char ch = client_view[nr][nc];
+          if (ch >= '0' && ch <= '8') {
+            int num = ch - '0';
+            int marked = 0, unknown = 0;
+            for (int dr2 = -1; dr2 <= 1; ++dr2) {
+              for (int dc2 = -1; dc2 <= 1; ++dc2) {
+                if (dr2 == 0 && dc2 == 0) continue;
+                int ar = nr + dr2, ac = nc + dc2;
+                if (ar < 0 || ar >= rows || ac < 0 || ac >= columns) continue;
+                char v = client_view[ar][ac];
+                if (v == '@') marked++;
+                else if (v == '?') unknown++;
+              }
+            }
+            if (unknown > 0) {
+              double p = (double)std::max(0, num - marked) / (double)unknown;
+              sum_p += p;
+              cnt++;
+            }
+          }
+        }
+      }
+      double score = (cnt > 0) ? (sum_p / cnt) : 1.0; // prefer cells near numbers with lower estimated mine ratio
+      if (score < best_score) {
+        best_score = score;
+        best_r = r; best_c = c;
       }
     }
+  }
+  if (best_r != -1) {
+    Execute(best_r, best_c, 0);
+    return;
   }
   // If no unknowns remain, do nothing.
 }
